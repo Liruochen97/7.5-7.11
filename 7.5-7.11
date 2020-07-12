@@ -1,0 +1,130 @@
+##reshape2包
+ID<-c(1,1,2,2)
+Time<-c(1,2,1,2)
+x1<-c(5,3,6,2)
+x2<-c(6,5,1,4)
+mydata<-data.frame(ID,Time,x1,x2)
+library(reshape2)
+md<-melt(mydata,id=c("ID","Time"))##将变量x1和x2融合
+##不同类型的数据重铸
+newdata<-dcast(md,ID+Time~variable) ##variable不整合
+newdata<-dcast(md,ID~Time+variable) ##Time和variable整合
+newdata<-dcast(md,ID~Time,mean) ##ID为标识，不同Time的value求均值
+newdata<-dcast(md,ID~variable,mean) ##ID为标识，不同variable的value求均值
+newdata<-dcast(md,Time~variable,mean) ##Time为标识，不同variable的value求均值
+##描述性统计分析
+myvars<-c("mpg","hp","wt")
+x<-head(mtcars[myvars]) ##查看前6个mtcars中这三个参数的值
+mystats<-function(x,na.omit=FALSE) {  ##自编所需的描述性统计量的值的函数
+if(na.omit)
+x<-x[!is.na(x)]
+m<-mean(x)
+s<-sd(x)
+return(c(mean=m,sd=s))
+}
+##分组计算描述性统计量
+options(digits=3)
+myvars<-c("mpg","hp","wt")
+aggregate(mtcars[myvars],by=list(am=mtcars$am),mean) ##按am分组计算平均值
+##使用by()函数返回多个统计量
+mystats<-function(x,na.omit=FALSE) {  ##自编所需的描述性统计量的值的函数
+if(na.omit)
+x<-x[!is.na(x)]
+m<-mean(x)
+s<-sd(x)
+return(c(mean=m,sd=s))
+}
+dstats<-function(x) sapply(x,mystats)
+by(mtcars[myvars],mtcars$cyl,dstats)
+##生成一维列联表
+library(vcd) ##需提前安装vcd包
+mytable<-with(Arthritis,table(Sex)) ##统计Arthritis中不同sex的频数
+mytable
+prob.table(mytable) ##转化为比例值
+prob.table(mytable)*100 ##转化为百分比
+##生成二维列联表
+library(vcd)
+attach(Arthritis)
+mytable<-table(Sex,Improved) ##生成Sex和Improved的二维列联表
+detach(Arthritis)
+#或
+mytable<-xtabs(~Sex+Improved,data=Arthritis) ##同上，且前一个为行，后一个为列
+##生成频数和比例
+margin.table(mytable,1) ##统计第一个变量的频数
+prop.table(mytable,2) ##统计第二个变量的比例，没有数字表示每个单元格所占比例
+##添加边际和
+addmargins(mytable)
+addmargins(prop.table(mytable))
+addmargins(prop.table(mytable,2),1) ##添加第一个变量的边际和
+##多维列联表（上述函数推广）
+newtable<-xtabs(~Sex+Improved+Treatment,data=Arthritis)
+margin.table(newtable,3)
+prop.table(newtable,2)
+margin.table(newtable,c(1,2)) ##交叉统计第1、2个变量的边际频数
+prop.table(newtable,c(1,2)) ##交叉统计第1、2个变量的频率
+ftable(prop.table(newtable,c(1,2))) ##紧凑展示上述结果
+##卡方独立性检验
+library(vcd)
+mytable<-xtabs(~Treatment+Improved,data=Arthritis)
+chisq.test(mytable) ##对mytable的两个变量进行卡方检验，p-value为相互独立的概率，一般认为>0.05为相互独立，只能用于二维表的独立性检验
+##Fisher精确检验
+fisher.test(mytable) ##行、列数需>2
+##Cochran-Mantel-Haenszel检验
+newtable<-xtabs(~Treatment+Improved+Sex,data=Arthritis)
+mantelhaen.test(newtable) ##检验前两个变量在第三个变量的每一层中是否独立，不存在三阶交互作用
+##相关性的度量
+assocstats(mytable) ##检验表中两个变量相关性的大小，给出的三个值越大相关性越大
+##相关,相关系数0为不相关，1为相关性最大，正负代表相关性的正负
+states<-state.x77[,1:6]
+cor(states) ##计算states的pearson相关系数
+cor(states,method="spearman") ##计算states的spearman相关系数
+cov(states) ##计算states的协方差
+##研究某组变量与另一组变量的相关性
+x<-states[,c("Population","Income","Illiteracy","HS Grad")]
+y<-states[,c("Life Exp","Murder")]
+cor(x,y)
+##相关性的显著性检验
+states<-state.x77[,1:6]
+cor.test(states[,3],states[,5]) ##检测两个变量间相关度是否为0
+library(psych) ##使用前需安装
+corr.test(states,use="complete") ##计算相关矩阵并进行显著性检验
+##独立样本的t检验
+library(MASS)
+t.test(Prob~So,data=UScrime) ##检测独立的两组变量之间是否具有显著性差异
+##非独立样本的t检验
+result<-with(UScrime,t.test(U1,U2,paired=TRUE)) ##检测U1和U2两个不独立的变量间的差异，并将结果保存到result中
+##回归
+fit<-lm(weight~height,data=women) ##拟合weight和height的线性模型
+summary(fit) ##展示拟合模型的详细结果
+fitted(fit) ##列出拟合模型的预测值
+residuals(fit) ##列出拟合模型的残差值
+plot(women$height,women$weight)
+abline(fit) ##绘制拟合曲线，注意变量（plot（height，weight），abline（weight，height））
+##多项式回归
+fit2<-lm(weight~height+I(height^2),data=women) ##二项式回归，需要几项就加几个I()函数，一般拟合度好就不需要更多项
+plot(women$height,women$weight)
+lines(women$height,fitted(fit2)) ##添加二项式拟合曲线
+##多元线性回归（预测多个变量）
+states<-data.frame(state.x77[,c("Murder","Population","Illiteracy","Income","Frost")]) ##挑选感兴趣的变量并将矩阵转化为数据框
+cor(states) ##首先检查二变量间的相关性
+fit<-lm(Murder~Population+Illiteracy+Income+Frost,data=states) ##多元线性回归分析
+summary(fit)
+##有交互项的多元线性回归
+fit2<-lm(mpg~hp+wt+hp:wt,data=mtcars)
+summary(fit2)  
+##回归诊断
+confint(fit) ##查看置信区间95%内各预测变量的变化区间
+fit3<-lm(height~weight,data=women)
+par(mfrow=c(2,2))
+plot(fit3) ##生成评价模型拟合情况的图形
+library(car)
+qqPlot(fit,lables=row.name(states),id.method="identify",simulate=TRUE,main="Q-Q Plot") ##生成更精确的正态假设检验图形，包含95%置信区间范围（每次可能不同）
+durbinWatsonTest(fit) ##检验误差的独立性
+crPlots(fit) ##绘制成分残差图
+ncvTest(fit) ##检验同方差性
+spreadLevelPlot(fit) ##绘制有拟合曲线的散点图
+library(gvlma)
+gvmodel<-gvlma(fit)
+summary(gvmodel) ##综合验证线性模型的假设
+vif(fit) ##检测多重共线性问题，根号vif>2即存在多重共线性问题，或
+sqrt(vif(fit))>2 # problem?
